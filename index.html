@@ -1,0 +1,336 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>DN Claim Station</title>
+  <script src="https://cdn.jsdelivr.net/npm/ethers@6.13.4/dist/ethers.umd.min.js"></script>
+  <style>
+    :root {
+      --bg: #f3ead7;
+      --panel: #fff7e8;
+      --ink: #201815;
+      --muted: #756858;
+      --line: #2a211b;
+      --accent: #f59e0b;
+      --accent2: #7dd3fc;
+      --danger: #ef4444;
+      --good: #16a34a;
+      --shadow: 8px 8px 0 #201815;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: ui-rounded, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at 20% 10%, rgba(125, 211, 252, .45), transparent 28rem),
+        radial-gradient(circle at 90% 20%, rgba(245, 158, 11, .35), transparent 24rem),
+        var(--bg);
+      min-height: 100vh;
+    }
+
+    .wrap { max-width: 1080px; margin: 0 auto; padding: 28px 18px 48px; }
+    header { display: flex; justify-content: space-between; gap: 16px; align-items: center; margin-bottom: 34px; }
+    .brand { display: flex; align-items: center; gap: 12px; font-weight: 950; letter-spacing: -.04em; font-size: clamp(24px, 4vw, 42px); }
+    .logo { width: 54px; height: 54px; display: grid; place-items: center; border: 3px solid var(--line); border-radius: 18px; background: white; box-shadow: 5px 5px 0 var(--line); }
+    .home { color: var(--ink); font-weight: 850; text-decoration: none; border: 2px solid var(--line); border-radius: 999px; padding: 10px 14px; background: #fff; box-shadow: 4px 4px 0 var(--line); }
+
+    .hero { display: grid; grid-template-columns: 1.05fr .95fr; gap: 22px; align-items: stretch; }
+    .card { border: 3px solid var(--line); border-radius: 28px; background: rgba(255, 247, 232, .92); box-shadow: var(--shadow); padding: clamp(18px, 3vw, 32px); }
+    .kicker { display: inline-flex; align-items: center; gap: 8px; background: var(--accent2); border: 2px solid var(--line); border-radius: 999px; padding: 8px 12px; font-weight: 900; margin-bottom: 16px; }
+    h1 { font-size: clamp(42px, 8vw, 82px); line-height: .86; margin: 0 0 18px; letter-spacing: -.07em; }
+    p { color: var(--muted); font-size: 17px; line-height: 1.55; margin: 0; }
+
+    .button { width: 100%; border: 3px solid var(--line); background: var(--accent); color: var(--ink); box-shadow: 6px 6px 0 var(--line); border-radius: 18px; padding: 16px 18px; font-size: 18px; font-weight: 950; cursor: pointer; transition: transform .12s ease, box-shadow .12s ease, opacity .12s ease; }
+    .button:hover:not(:disabled) { transform: translate(2px, 2px); box-shadow: 4px 4px 0 var(--line); }
+    .button:disabled { opacity: .5; cursor: not-allowed; }
+    .secondary { background: white; }
+
+    .status { display: grid; gap: 12px; margin-top: 18px; }
+    .pill { display: flex; justify-content: space-between; gap: 12px; border: 2px solid var(--line); border-radius: 16px; background: white; padding: 13px 14px; font-weight: 850; }
+    .pill span:first-child { color: var(--muted); }
+    .good { color: var(--good); } .bad { color: var(--danger); }
+
+    .rounds { display: grid; gap: 14px; margin-bottom: 18px; }
+    .round { display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: center; border: 3px solid var(--line); border-radius: 20px; padding: 15px; background: #fff; cursor: pointer; }
+    .round.active { background: #e0f2fe; }
+    .round strong { display: block; font-size: 19px; }
+    .round small { color: var(--muted); font-weight: 750; }
+    .tag { border: 2px solid var(--line); border-radius: 999px; padding: 6px 10px; background: var(--panel); font-weight: 950; }
+
+    .claimbox { text-align: center; padding: 24px; border: 3px dashed var(--line); border-radius: 24px; background: rgba(255,255,255,.7); margin: 18px 0; }
+    .amount { font-size: clamp(38px, 7vw, 68px); font-weight: 1000; letter-spacing: -.06em; line-height: .9; margin: 10px 0; }
+    .tiny { font-size: 13px; color: var(--muted); overflow-wrap: anywhere; }
+    .notice { margin-top: 18px; border-left: 6px solid var(--line); background: rgba(255,255,255,.8); padding: 14px 16px; border-radius: 14px; color: var(--muted); font-weight: 750; }
+
+    @media (max-width: 820px) {
+      header { align-items: flex-start; }
+      .hero { grid-template-columns: 1fr; }
+      .home { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div class="brand"><div class="logo">🐻‍❄️</div><div>DN Claim Station</div></div>
+      <a class="home" href="https://www.davydonothing.com/">Back to Davy HQ</a>
+    </header>
+
+    <main class="hero">
+      <section class="card">
+        <div class="kicker">SERIOUS CLAIM BUSINESS</div>
+        <h1>Claim your DN tokens.</h1>
+        <p>Connect your wallet. If you are on the whitelist, your full eligible allocation appears here. One click claims the whole amount. No partial claims. No double dipping. Maximum doing nothing.</p>
+        <div class="notice" id="message">Connect your wallet to check eligibility.</div>
+      </section>
+
+      <section class="card">
+        <div class="rounds">
+          <div class="round active" data-round="1">
+            <div><strong>Round 1</strong><small id="round1Name">Loading token...</small></div><div class="tag">R1</div>
+          </div>
+          <div class="round" data-round="2">
+            <div><strong>Round 2</strong><small id="round2Name">Loading token...</small></div><div class="tag">R2</div>
+          </div>
+        </div>
+
+        <button id="connectBtn" class="button">Connect Wallet</button>
+
+        <div class="status">
+          <div class="pill"><span>Network</span><strong id="network">Not connected</strong></div>
+          <div class="pill"><span>Wallet</span><strong id="wallet">—</strong></div>
+          <div class="pill"><span>Eligibility</span><strong id="eligibility">Unknown</strong></div>
+          <div class="pill"><span>Claim status</span><strong id="claimStatus">—</strong></div>
+        </div>
+
+        <div class="claimbox">
+          <div class="tiny">Eligible amount</div>
+          <div class="amount" id="amount">0</div>
+          <div class="tiny" id="tokenLabel">tokens</div>
+        </div>
+
+        <button id="claimBtn" class="button" disabled>Claim Tokens</button>
+        <button id="switchBtn" class="button secondary" style="margin-top:14px;" hidden>Switch to Linea</button>
+      </section>
+    </main>
+  </div>
+
+<script>
+  const LINEA_CHAIN_ID_DEC = 59144;
+  const LINEA_CHAIN_ID_HEX = "0xe708";
+
+  // AFTER DEPLOYMENT: paste your deployed DNTokenClaim contract address here.
+  const CLAIM_CONTRACT_ADDRESS = "0xPASTE_CLAIM_CONTRACT_ADDRESS_HERE";
+
+  // Put these JSON files beside index.html in your repo/Vercel project.
+  const CLAIM_FILES = {
+    1: "./claims-round-1.json",
+    2: "./claims-round-2.json"
+  };
+
+  const CLAIM_ABI = [
+    "function claim(uint256 roundId,uint256 amount,bytes32[] proof) external",
+    "function hasClaimed(uint256 roundId,address account) view returns (bool)",
+    "function rounds(uint256 roundId) view returns (address token, bytes32 merkleRoot, bool paused, uint256 totalClaimed)",
+    "function paused() view returns (bool)"
+  ];
+
+  const ERC20_ABI = [
+    "function decimals() view returns (uint8)",
+    "function symbol() view returns (string)"
+  ];
+
+  let provider, signer, account, contract;
+  let selectedRound = 1;
+  let claimData = {};
+  let tokenMeta = {};
+
+  const $ = (id) => document.getElementById(id);
+  const short = (addr) => addr ? `${addr.slice(0, 6)}...${addr.slice(-4)}` : "—";
+  const setMessage = (msg) => $("message").textContent = msg;
+
+  async function loadClaimFiles() {
+    for (const roundId of [1, 2]) {
+      try {
+        const res = await fetch(CLAIM_FILES[roundId], { cache: "no-store" });
+        if (!res.ok) throw new Error(`Missing ${CLAIM_FILES[roundId]}`);
+        claimData[roundId] = await res.json();
+        const label = claimData[roundId].tokenSymbol || `Round ${roundId} token`;
+        $(`round${roundId}Name`).textContent = label;
+      } catch (err) {
+        claimData[roundId] = { claims: {} };
+        $(`round${roundId}Name`).textContent = "Whitelist file missing";
+      }
+    }
+  }
+
+  async function connect() {
+    if (!window.ethereum) {
+      setMessage("MetaMask or another injected wallet is required.");
+      return;
+    }
+    if (CLAIM_CONTRACT_ADDRESS.includes("PASTE")) {
+      setMessage("Add your deployed claim contract address inside index.html first.");
+      return;
+    }
+
+    provider = new ethers.BrowserProvider(window.ethereum);
+    await provider.send("eth_requestAccounts", []);
+    signer = await provider.getSigner();
+    account = await signer.getAddress();
+    contract = new ethers.Contract(CLAIM_CONTRACT_ADDRESS, CLAIM_ABI, signer);
+
+    $("connectBtn").textContent = "Wallet Connected";
+    await refresh();
+  }
+
+  async function refresh() {
+    if (!provider || !account) return;
+
+    const network = await provider.getNetwork();
+    const onLinea = Number(network.chainId) === LINEA_CHAIN_ID_DEC;
+    $("network").textContent = onLinea ? "Linea Mainnet" : `Wrong network (${network.chainId})`;
+    $("network").className = onLinea ? "good" : "bad";
+    $("switchBtn").hidden = onLinea;
+
+    $("wallet").textContent = short(account);
+
+    const data = claimData[selectedRound] || { claims: {} };
+    const record = data.claims?.[account.toLowerCase()];
+    const symbol = data.tokenSymbol || "tokens";
+    const decimals = Number(data.tokenDecimals ?? 18);
+    $("tokenLabel").textContent = symbol;
+
+    if (!record) {
+      $("eligibility").textContent = "Not eligible";
+      $("eligibility").className = "bad";
+      $("amount").textContent = "0";
+      $("claimStatus").textContent = "—";
+      $("claimBtn").disabled = true;
+      setMessage(`This wallet is not whitelisted for Round ${selectedRound}.`);
+      return;
+    }
+
+    const amountRaw = BigInt(record.amount);
+    const amountPretty = ethers.formatUnits(amountRaw, decimals);
+    $("amount").textContent = trimAmount(amountPretty);
+    $("eligibility").textContent = "Eligible";
+    $("eligibility").className = "good";
+
+    let alreadyClaimed = false;
+    let globallyPaused = false;
+    let roundInfo;
+
+    try {
+      alreadyClaimed = await contract.hasClaimed(selectedRound, account);
+      globallyPaused = await contract.paused();
+      roundInfo = await contract.rounds(selectedRound);
+    } catch (err) {
+      setMessage("Could not read the claim contract. Check the contract address and network.");
+      $("claimBtn").disabled = true;
+      return;
+    }
+
+    const roundPaused = roundInfo.paused;
+    const rootMatches = String(roundInfo.merkleRoot).toLowerCase() === String(data.merkleRoot || "").toLowerCase();
+
+    if (alreadyClaimed) {
+      $("claimStatus").textContent = "Already claimed";
+      $("claimStatus").className = "bad";
+      $("claimBtn").disabled = true;
+      setMessage(`Round ${selectedRound} has already been claimed by this wallet.`);
+    } else if (!onLinea) {
+      $("claimStatus").textContent = "Switch network";
+      $("claimStatus").className = "bad";
+      $("claimBtn").disabled = true;
+      setMessage("Switch to Linea Mainnet to claim.");
+    } else if (globallyPaused || roundPaused) {
+      $("claimStatus").textContent = "Paused";
+      $("claimStatus").className = "bad";
+      $("claimBtn").disabled = true;
+      setMessage("Claims are currently paused.");
+    } else if (!rootMatches) {
+      $("claimStatus").textContent = "Root mismatch";
+      $("claimStatus").className = "bad";
+      $("claimBtn").disabled = true;
+      setMessage("The website whitelist root does not match the contract root. Do not claim until fixed.");
+    } else {
+      $("claimStatus").textContent = "Ready";
+      $("claimStatus").className = "good";
+      $("claimBtn").disabled = false;
+      setMessage(`You are eligible for ${trimAmount(amountPretty)} ${symbol} in Round ${selectedRound}.`);
+    }
+  }
+
+  function trimAmount(value) {
+    if (!value.includes(".")) return value;
+    return value.replace(/\.0+$/, "").replace(/(\.\d*?[1-9])0+$/, "$1");
+  }
+
+  async function claim() {
+    const data = claimData[selectedRound];
+    const record = data?.claims?.[account?.toLowerCase()];
+    if (!record) return;
+
+    try {
+      $("claimBtn").disabled = true;
+      setMessage("Confirm the claim in your wallet...");
+      const tx = await contract.claim(selectedRound, record.amount, record.proof);
+      setMessage("Claim submitted. Waiting for confirmation...");
+      await tx.wait();
+      setMessage("Claim complete. Davy is proud of your doing nothing.");
+      await refresh();
+    } catch (err) {
+      const reason = err?.shortMessage || err?.reason || err?.message || "Claim failed";
+      setMessage(reason);
+      await refresh();
+    }
+  }
+
+  async function switchToLinea() {
+    try {
+      await window.ethereum.request({ method: "wallet_switchEthereumChain", params: [{ chainId: LINEA_CHAIN_ID_HEX }] });
+    } catch (switchError) {
+      if (switchError.code === 4902) {
+        await window.ethereum.request({
+          method: "wallet_addEthereumChain",
+          params: [{
+            chainId: LINEA_CHAIN_ID_HEX,
+            chainName: "Linea Mainnet",
+            nativeCurrency: { name: "ETH", symbol: "ETH", decimals: 18 },
+            rpcUrls: ["https://rpc.linea.build"],
+            blockExplorerUrls: ["https://lineascan.build"]
+          }]
+        });
+      } else {
+        setMessage("Could not switch network in wallet.");
+      }
+    }
+    await refresh();
+  }
+
+  document.querySelectorAll(".round").forEach((el) => {
+    el.addEventListener("click", async () => {
+      selectedRound = Number(el.dataset.round);
+      document.querySelectorAll(".round").forEach((r) => r.classList.remove("active"));
+      el.classList.add("active");
+      await refresh();
+    });
+  });
+
+  $("connectBtn").addEventListener("click", connect);
+  $("claimBtn").addEventListener("click", claim);
+  $("switchBtn").addEventListener("click", switchToLinea);
+
+  if (window.ethereum) {
+    window.ethereum.on?.("accountsChanged", () => window.location.reload());
+    window.ethereum.on?.("chainChanged", () => window.location.reload());
+  }
+
+  loadClaimFiles();
+</script>
+</body>
+</html>
